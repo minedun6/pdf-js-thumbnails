@@ -2,6 +2,7 @@
 var pdfjsLib = window["pdfjs-dist/build/pdf"];
 var worker = new pdfjsLib.PDFWorker();
 var urls = [
+  // "https://cors-anywhere.herokuapp.com/https://docs.aws.amazon.com/inspector/latest/user/inspector-guide.pdf",
   "https://pdftron.s3.amazonaws.com/downloads/pl/webviewer-demo.pdf",
   "https://pdftron.s3.amazonaws.com/downloads/pl/demo-annotated.pdf",
   "https://pdftron.s3.amazonaws.com/downloads/pl/magazine.pdf",
@@ -16,30 +17,35 @@ $(function () {
     document.getElementById("pages").append(wrapperEl);
   });
 
-  Promise.all(
+  Promise.allSettled(
     urls.map(function (url, index) {
-      return getPdfPages(url, `file-pages-wrapper-${index + 1}`);
+      return getPdfPages(url);
     })
-  ).then(async (results) => {
-    for (const pdf of results) {
-      const index = results.indexOf(pdf);
-      const filePagesWrapper = $("#file-pages-wrapper-" + (index + 1));
+  )
+  .then((results) => {
+    console.log(results)
+    // for (const pdf of results) {
+    //   const index = results.indexOf(pdf);
+    //   const filePagesWrapper = $("#file-pages-wrapper-" + (index + 1));
 
-      for (var i = 1; i <= pdf.numPages; i++) {
-        filePagesWrapper.append(
-          '<div class="page-wrapper loading" data-page-number=' +
-            i +
-            ">" +
-            '<span class="loader"></span>' +
-            "<img />" +
-            "</div>"
-        );
-      }
+    //   for (var i = 1; i <= pdf.numPages; i++) {
+    //     filePagesWrapper.append(
+    //       '<div class="page-wrapper loading" data-page-number=' +
+    //         i +
+    //         ">" +
+    //         '<span class="loader"></span>' +
+    //         "<img />" +
+    //         "</div>"
+    //     );
+    //   }
 
-      for (let pageNumber in _.range(1, parseInt(pdf.numPages) - 1)) {
-        constructPage(pdf, index, parseInt(pageNumber) + 1);
-      }
-    }
+    //   for (let pageNumber in _.range(1, parseInt(pdf.numPages) + 1)) {
+    //     await constructPage(pdf, index, parseInt(pageNumber) + 1);
+    //   }
+    // }
+  })
+  .catch((err) => {
+    console.log(err)
   });
 });
 
@@ -48,47 +54,53 @@ function getPdfPages(url) {
 
   // get progress data
   loadingTask.onProgress = function (data) {
-    console.log("percentage : " + (data.loaded / data.total) * 100) ;
+    console.log("percentage : " + (data.loaded / data.total) * 100);
   };
 
-  return loadingTask.promise
+  return loadingTask.promise;
 }
 
 async function constructPage(pdf, fileID, pageNumber) {
-  const filePagesWrapper = $("#file-pages-wrapper-" + (fileID + 1))
+  const filePagesWrapper = $("#file-pages-wrapper-" + (fileID + 1));
 
-  pdf.getPage(pageNumber).then(async function (page) {
-    var pageWrapper = filePagesWrapper.find(
-      ".page-wrapper[data-page-number=" + pageNumber + "]"
-    );
-    var canvas = document.createElement("canvas");
-    var scale;
+  pdf
+    .getPage(pageNumber)
+    .then(async function (page) {
+      var pageWrapper = filePagesWrapper.find(
+        ".page-wrapper[data-page-number=" + pageNumber + "]"
+      );
+      var canvas = document.createElement("canvas");
+      var scale;
 
-    if (page.view[2] > page.view[3]) {
-      scale = canvas.width / page.view[3];
-    } else {
-      scale = canvas.width / page.view[2];
-    }
+      if (page.view[2] > page.view[3]) {
+        scale = canvas.width / page.view[3];
+      } else {
+        scale = canvas.width / page.view[2];
+      }
 
-    var viewport = page.getViewport({ scale: scale });
-    var context = canvas.getContext("2d");
+      var viewport = page.getViewport({ scale: scale });
+      var context = canvas.getContext("2d");
 
-    canvas.height = page.view[3] * scale;
+      canvas.height = page.view[3] * scale;
 
-    page
-      .render({
-        canvasContext: context,
-        viewport: viewport,
-      })
-      .promise.then((_) => {
-        var img = pageWrapper.find("img");
+      page
+        .render({
+          canvasContext: context,
+          viewport: viewport,
+        })
+        .promise.then((_) => {
+          var img = pageWrapper.find("img");
 
-        img.attr("src", canvas.toDataURL());
-        img.on("load", () => {
-          setTimeout(() => img.parent().removeClass("loading"), 500);
+          img.attr("src", canvas.toDataURL());
+          img.css("width", "100%");
+          img.on("load", () => {
+            setTimeout(() => img.parent().removeClass("loading"), 500);
+          });
         });
-      });
-  });
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
 }
 
 HTMLImageElement.prototype.waitToLoad = () => {
