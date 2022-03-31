@@ -17,32 +17,32 @@ $(function () {
     document.getElementById("pages").append(wrapperEl);
   });
 
-  Promise.allSettled(
+  Promise.all(
     urls.map(function (url, index) {
       return getPdfPages(url);
     })
   )
-  .then((results) => {
-    console.log(results)
-    // for (const pdf of results) {
-    //   const index = results.indexOf(pdf);
-    //   const filePagesWrapper = $("#file-pages-wrapper-" + (index + 1));
+  .then(async results => {
 
-    //   for (var i = 1; i <= pdf.numPages; i++) {
-    //     filePagesWrapper.append(
-    //       '<div class="page-wrapper loading" data-page-number=' +
-    //         i +
-    //         ">" +
-    //         '<span class="loader"></span>' +
-    //         "<img />" +
-    //         "</div>"
-    //     );
-    //   }
+      for (const pdf of results) {
+          const index = results.indexOf(pdf);
+          const filePagesWrapper = $("#file-pages-wrapper-" + (index + 1));
 
-    //   for (let pageNumber in _.range(1, parseInt(pdf.numPages) + 1)) {
-    //     await constructPage(pdf, index, parseInt(pageNumber) + 1);
-    //   }
-    // }
+          for (var i = 1; i <= pdf.numPages; i++) {
+              filePagesWrapper.append(
+                  '<div class="page-wrapper loading" data-page-number=' +
+                  i +
+                  ">" +
+                  '<span class="loader"></span>' +
+                  "<img />" +
+                  "</div>"
+              );
+          }
+
+          for (let pageNumber in _.range(1, parseInt(pdf.numPages) + 1)) {
+              await constructPage(pdf, index, parseInt(pageNumber) + 1);
+          }
+      }
   })
   .catch((err) => {
     console.log(err)
